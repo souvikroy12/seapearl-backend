@@ -25,7 +25,8 @@ app.use(cookieParser());
 // CORS - Localhost aur Vercel frontend dono allowed
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://seapearl-frontend.vercel.app'
+  'https://seapearl-frontend.vercel.app',
+  'https://seapearl-luxury.vercel.app'
 ];
 
 app.use(cors({ 

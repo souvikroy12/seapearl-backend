@@ -87,7 +87,7 @@ const createBooking = async (req, res) => {
 // const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Nayi Line:
-const frontendUrl = process.env.FRONTEND_URL || 'https://seapearl-frontend.vercel.app';
+const frontendUrl = process.env.FRONTEND_URL || 'https://seapearl-luxury.vercel.app';
 
         // Direct standalone invoice view route
         const voucherUrl = `${frontendUrl}/invoice/${savedBooking._id}`;
