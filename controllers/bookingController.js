@@ -83,7 +83,11 @@ const createBooking = async (req, res) => {
         // Invoice/Voucher setup
         const invoiceRef = `SP-${savedBooking._id.toString().slice(-6).toUpperCase()}`;
         const formattedPrice = `₹ ${cleanPrice.toLocaleString('en-IN')}`;
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        // Purani Line:
+// const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+// Nayi Line:
+const frontendUrl = process.env.FRONTEND_URL || 'https://seapearl-frontend.vercel.app';
 
         // Direct standalone invoice view route
         const voucherUrl = `${frontendUrl}/invoice/${savedBooking._id}`;
