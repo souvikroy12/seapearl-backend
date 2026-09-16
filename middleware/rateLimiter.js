@@ -24,4 +24,16 @@ const apiLimiter = rateLimit({
   }
 });
 
-module.exports = { authLimiter, apiLimiter };
+// 3. AI Limiter: AI Chat & Voice commands ke liye (Spam & Gemini Quota protection)
+const aiChatLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 15, // Har IP se max 15 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    action: "CHAT",
+    reply: "Bohot saari requests aa rahi hain! Kripya 1 minute baad try karein."
+  }
+});
+
+module.exports = { authLimiter, apiLimiter, aiChatLimiter };
