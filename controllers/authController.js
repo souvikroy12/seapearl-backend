@@ -42,16 +42,14 @@ const emailTemplate = (content) => `
 `;
 
 //  Session Cookie Injection Pipeline 
-// 
 const sendSessionCookie = (res, statusCode, userData) => {
   const token = generateToken(userData._id);
 
-  const isProduction = process.env.NODE_ENV === 'production';
-
   const cookieOptions = {
-    httpOnly: true, // XSS Attack Safety Layer: Frontend JS ise touch nahi kar sakti
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 7 * 24 * 60 * 60 * 1000
   };
 
   res.status(statusCode)
@@ -60,7 +58,7 @@ const sendSessionCookie = (res, statusCode, userData) => {
       _id: userData._id,
       name: userData.name,
       email: userData.email,
-      token // App functionality break na ho, isliye token payload pipeline mein bhi rahega
+      token
     });
 };
 
@@ -123,7 +121,6 @@ const loginUser = async (req, res, next) => {
     if (user && (await user.matchPassword(password))) {
       sendSessionCookie(res, 200, user);
     } else {
-      // Direct clean JSON response (no HTML leak, no stack trace)
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid email or password' 
@@ -137,7 +134,7 @@ const loginUser = async (req, res, next) => {
   }
 };
 
-// @desc  Forgot Password - Send Link
+// @desc   Forgot Password - Send Link
 const forgotPassword = async (req, res, next) => {
   const { email } = req.body;
   try {
@@ -177,8 +174,6 @@ const forgotPassword = async (req, res, next) => {
   }
 };
 
-
-//new pass dalne k section 
 // @desc    Reset Password - Save New
 const resetPassword = async (req, res, next) => {
   try {
@@ -194,7 +189,7 @@ const resetPassword = async (req, res, next) => {
     }
 
     user.password = req.body.password;
-    user.resetPasswordToken = undefined;    //ye dono undefined kiye hai taki ye dono schema se delete ho jaye
+    user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
 
@@ -207,12 +202,11 @@ const resetPassword = async (req, res, next) => {
 // @desc   Logout User - Clear Session Cookie Container
 const logoutUser = async (req, res, next) => {
   try {
-    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('seapearl_session_token', '', {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-      expires: new Date(0) // Token immediate purge state execution
+      secure: true,
+      sameSite: 'none',
+      expires: new Date(0)
     }).json({ message: "Session logged out securely! ✅" });
   } catch (error) {
     next(error);
