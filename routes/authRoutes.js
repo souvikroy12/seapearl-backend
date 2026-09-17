@@ -7,7 +7,8 @@ const {
   forgotPassword, 
   resetPassword,
   googleLogin,
-  logoutUser
+  logoutUser,
+  refreshAccessToken // <-- 1. Import add kiya
 } = require('../controllers/authController');
 
 // Validation Middlewares import
@@ -27,13 +28,16 @@ router.post('/login', validateLogin, loginUser);
 // 3. Google Login Route
 router.post('/google-login', googleLogin);
 
-// 4. Logout Route (Cookie Clear)
+// 4. Refresh Token Route (Issue new 15m access token)
+router.post('/refresh', refreshAccessToken); // <-- 2. Naya route add kiya
+
+// 5. Logout Route (Cookie Clear)
 router.post('/logout', logoutUser);
 
-// 5. Forgot Password Route
+// 6. Forgot Password Route
 router.post('/forgot-password', validateForgotPassword, forgotPassword);
 
-// 6. Reset Password Route
+// 7. Reset Password Route
 router.put('/reset-password/:token', validateResetPassword, resetPassword);
 
 module.exports = router;

@@ -6,7 +6,10 @@ const crypto = require('crypto');
 
 // 1. JWT Token Generator (Lifespan dynamically handled by Cookie wrapper)
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+};
+const refreshtoken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 };
 
 // 2. Nodemailer Transporter Setup
@@ -44,6 +47,7 @@ const emailTemplate = (content) => `
 //  Session Cookie Injection Pipeline 
 const sendSessionCookie = (res, statusCode, userData) => {
   const token = generateToken(userData._id);
+  const refreshTokenValue = refreshtoken(userData._id);
 
   const cookieOptions = {
     httpOnly: true,
@@ -53,7 +57,7 @@ const sendSessionCookie = (res, statusCode, userData) => {
   };
 
   res.status(statusCode)
-    .cookie('seapearl_session_token', token, cookieOptions)
+    .cookie('seapearl_refresh_token', refreshTokenValue, cookieOptions)
     .json({
       _id: userData._id,
       name: userData.name,
@@ -134,6 +138,42 @@ const loginUser = async (req, res, next) => {
   }
 };
 
+// @desc    Refresh Access Token
+const refreshAccessToken = async (req, res) => {
+  try {
+    const refreshToken = req.cookies?.seapearl_refresh_token;
+
+    if (!refreshToken) {
+      return res.status(401).json({ success: false, message: "No refresh token found" });
+    }
+
+    jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err, decoded) => {
+      if (err) {
+        return res.status(403).json({ success: false, message: "Invalid or expired refresh token" });
+      }
+
+      const user = await User.findById(decoded.id).select('-password');
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      const newToken = generateToken(user._id);
+
+      return res.status(200).json({
+        success: true,
+        token: newToken,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email
+        }
+      });
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Server error during token refresh" });
+  }
+};
+
 // @desc   Forgot Password - Send Link
 const forgotPassword = async (req, res, next) => {
   const { email } = req.body;
@@ -202,7 +242,7 @@ const resetPassword = async (req, res, next) => {
 // @desc   Logout User - Clear Session Cookie Container
 const logoutUser = async (req, res, next) => {
   try {
-    res.cookie('seapearl_session_token', '', {
+    res.cookie('seapearl_refresh_token', '', {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
@@ -213,4 +253,14 @@ const logoutUser = async (req, res, next) => {
   }
 };
 
-module.exports = { registerUser, loginUser, forgotPassword, resetPassword, googleLogin, logoutUser, transporter, emailTemplate };
+module.exports = { 
+  registerUser, 
+  loginUser, 
+  forgotPassword, 
+  resetPassword, 
+  googleLogin, 
+  logoutUser, 
+  refreshAccessToken,
+  transporter, 
+  emailTemplate 
+};
