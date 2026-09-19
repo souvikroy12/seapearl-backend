@@ -4,16 +4,17 @@ const User = require('../models/User');
 const protect = async (req, res, next) => {
   let token;
 
-  // 1. HttpOnly Cookie check karo
-  if (req.cookies && req.cookies.seapearl_session_token) {
-    token = req.cookies.seapearl_session_token;
-  } 
-  // 2. Authorization Header fallback check
-  else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  // 1. Authorization Header check karo (Primary)
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
+  } 
+  // 2. Cookie fallback check (Dono possible names check karo)
+  else if (req.cookies) {
+    token = req.cookies.seapearl_session_token || req.cookies.seapearl_refresh_token;
   }
 
-  if (!token) {
+  // Token null ya string "null"/"undefined" na ho
+  if (!token || token === 'null' || token === 'undefined') {
     return res.status(401).json({
       success: false,
       message: 'Access denied. Please login to reserve your sanctuary.'
@@ -33,6 +34,7 @@ const protect = async (req, res, next) => {
 
     next();
   } catch (error) {
+    console.error("JWT Verify Error:", error.message);
     return res.status(401).json({
       success: false,
       message: 'Session expired or unauthorized token. Please sign in again.'
