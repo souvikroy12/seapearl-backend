@@ -24,7 +24,9 @@ const BookingSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
-        required: true
+        required: [true, 'Phone number is required'],
+        trim: true,
+        match: [/^[6-9]\d{9}$/, 'Please enter a valid 10-digit phone number starting with 6, 7, 8, or 9']
     },
     country: {
         type: String,
@@ -84,7 +86,7 @@ const BookingSchema = new mongoose.Schema({
     timestamps: true // createdAt aur updatedAt auto-handle karega
 });
 
-//  PRODUCTION INDEXES //
+// PRODUCTION INDEXES //
 // 1. Fast User Bookings Lookup (User ki recent bookings O(log N) speed me milengi)
 BookingSchema.index({ email: 1, bookedAt: -1 });
 

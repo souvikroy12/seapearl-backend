@@ -27,6 +27,15 @@ const createBooking = async (req, res) => {
             return res.status(400).json({ success: false, message: "Please fill all required fields." });
         }
 
+        // --- SERVER-SIDE PHONE VALIDATION GUARD (Strict 10-Digit Indian Mobile) ---
+        const cleanPhone = String(phone).replace(/\D/g, "");
+        if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Please enter a valid 10-digit phone number starting with 6, 7, 8, or 9." 
+            });
+        }
+
         // Server-Side Pricing & Nights Recalculation
         const checkIn = new Date(checkInDate);
         const checkOut = new Date(checkOutDate);
@@ -61,7 +70,7 @@ const createBooking = async (req, res) => {
             firstName,
             lastName,
             email: targetEmail,
-            phone,
+            phone: cleanPhone,
             country: country || 'India',
             bookingFor: bookingFor || 'main',
             hotelName,
