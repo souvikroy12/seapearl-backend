@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
-const { transporter, emailTemplate } = require('./authController');
+const { emailTemplate } = require('./authController');
+const sendEmail = require('../utils/sendEmail');
 
 // 1. Create Booking & Dispatch Email Invoice
 const createBooking = async (req, res) => {
@@ -140,14 +141,11 @@ const createBooking = async (req, res) => {
             booking: savedBooking 
         });
 
-        // 2. Email background mein shoot karo taaki request freeze na ho
-        transporter.sendMail({
-            from: `"SeaPearl Reservations" <${process.env.EMAIL_USER}>`,
+        // 2. Email background mein shoot karo (Resend API ke through - zero connection timeout)
+        sendEmail({
             to: targetEmail,
             subject: `Sanctuary Pass Confirmed: ${hotelName} [${invoiceRef}]`,
             html: emailTemplate(invoiceBody)
-        }).then((info) => {
-            console.log("Email successfully sent! Message ID:", info.messageId);
         }).catch((mailErr) => {
             console.error("CRITICAL Email Send Error:", mailErr.message);
         });

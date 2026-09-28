@@ -1,8 +1,8 @@
 require('dotenv').config();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
 
 // 1. JWT Token Generator (Lifespan dynamically handled by Cookie wrapper)
 const generateToken = (id) => {
@@ -12,19 +12,16 @@ const refreshtoken = (id) => {
   return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 };
 
-// 2. Nodemailer Transporter Setup
-const transporter = nodemailer.createTransport({   //smtp connection 
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-transporter.verify((error) => {
-  if (error) console.log("Email Config Error :", error.message);
-  else console.log("SeaPearl Email Server Ready ✅");
-});
+// 2. Safe Fallback for Transporter (Crash-proof backwards compatibility)
+const transporter = {
+  sendMail: async (mailOptions) => {
+    return sendEmail({
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      html: mailOptions.html
+    });
+  }
+};
 
 //  Email Template Wrapper
 const emailTemplate = (content) => `
@@ -85,12 +82,11 @@ const registerUser = async (req, res, next) => {
         <a href="${process.env.FRONTEND_URL}" style="display: inline-block; background-color: #C6A675; color: #000; padding: 16px 35px; text-decoration: none; font-weight: bold; font-size: 13px; border-radius: 4px; letter-spacing: 2px; text-transform: uppercase;">Explore Your Dashboard</a>
       `;
 
-      transporter.sendMail({
-        from: `"SeaPearl Luxury" <${process.env.EMAIL_USER}>`,
+      sendEmail({
         to: user.email,
         subject: 'Welcome to SeaPearl - Your Journey Begins',
         html: emailTemplate(welcomeContent)
-      });
+      }).catch(err => console.error("Welcome email background error:", err));
 
       // Bypassed directly to our secure session runtime handler
       sendSessionCookie(res, 201, user);
@@ -174,7 +170,7 @@ const refreshAccessToken = async (req, res) => {
   }
 };
 
-// @desc   Forgot Password - Send Link
+// @desc    Forgot Password - Send Link
 const forgotPassword = async (req, res, next) => {
   const { email } = req.body;
   try {
@@ -199,8 +195,7 @@ const forgotPassword = async (req, res, next) => {
       </div>
     `;
 
-    await transporter.sendMail({
-      from: `"SeaPearl Security" <${process.env.EMAIL_USER}>`,
+    await sendEmail({
       to: user.email,
       subject: 'Security: Password Reset Request',
       html: emailTemplate(resetContent)
@@ -209,7 +204,7 @@ const forgotPassword = async (req, res, next) => {
     res.json({ message: "Reset link sent to your email! ✅" });
 
   } catch (error) {
-    console.error(" Nodemailer Send Error:", error.message);
+    console.error("Resend Send Error:", error.message);
     next(error);
   }
 };
@@ -239,7 +234,7 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
-// @desc   Logout User - Clear Session Cookie Container
+// @desc    Logout User - Clear Session Cookie Container
 const logoutUser = async (req, res, next) => {
   try {
     res.cookie('seapearl_refresh_token', '', {
