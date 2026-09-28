@@ -40,13 +40,11 @@ const createBooking = async (req, res) => {
         const validRooms = Math.max(1, Number(rooms) || 1);
 
         // --- SECURITY PATCH: PRICE TAMPERING GUARD ---
-        // Minimum legitimate threshold per night for hotel listings
         const MIN_PRICE_PER_NIGHT = 2500;
         const minimumAllowedTotal = MIN_PRICE_PER_NIGHT * calculatedNights * validRooms;
 
         const incomingPrice = Number(String(totalPrice).replace(/[^0-9.-]+/g, "")) || 0;
 
-        // Block tampered/manipulated prices (e.g. ₹1, negative values, or zero)
         if (!incomingPrice || incomingPrice < minimumAllowedTotal) {
             return res.status(400).json({ 
                 success: false, 
@@ -83,13 +81,7 @@ const createBooking = async (req, res) => {
         // Invoice/Voucher setup
         const invoiceRef = `SP-${savedBooking._id.toString().slice(-6).toUpperCase()}`;
         const formattedPrice = `₹ ${cleanPrice.toLocaleString('en-IN')}`;
-        // Purani Line:
-// const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-// Nayi Line:
-const frontendUrl = process.env.FRONTEND_URL || 'https://seapearl-luxury.vercel.app';
-
-        // Direct standalone invoice view route
+        const frontendUrl = process.env.FRONTEND_URL || 'https://seapearl-luxury.vercel.app';
         const voucherUrl = `${frontendUrl}/invoice/${savedBooking._id}`;
 
         const invoiceBody = `
@@ -132,24 +124,23 @@ const frontendUrl = process.env.FRONTEND_URL || 'https://seapearl-luxury.vercel.
             </div>
         `;
 
-        // Direct async email shoot
-        try {
-            console.log("Attempting to send email to:", targetEmail);
-            const info = await transporter.sendMail({
-                from: `"SeaPearl Reservations" <${process.env.EMAIL_USER}>`,
-                to: targetEmail,
-                subject: `Sanctuary Pass Confirmed: ${hotelName} [${invoiceRef}]`,
-                html: emailTemplate(invoiceBody)
-            });
-            console.log("Email successfully sent! Message ID:", info.messageId);
-        } catch (mailErr) {
-            console.error("CRITICAL Email Send Error:", mailErr);
-        }
-
+        // 1. Pop-up turant show karne ke liye response pehle dispatch karo
         res.status(201).json({ 
             success: true, 
             message: "Reservation confirmed successfully!", 
             booking: savedBooking 
+        });
+
+        // 2. Email background mein shoot karo taaki request freeze na ho
+        transporter.sendMail({
+            from: `"SeaPearl Reservations" <${process.env.EMAIL_USER}>`,
+            to: targetEmail,
+            subject: `Sanctuary Pass Confirmed: ${hotelName} [${invoiceRef}]`,
+            html: emailTemplate(invoiceBody)
+        }).then((info) => {
+            console.log("Email successfully sent! Message ID:", info.messageId);
+        }).catch((mailErr) => {
+            console.error("CRITICAL Email Send Error:", mailErr.message);
         });
 
     } catch (error) {
